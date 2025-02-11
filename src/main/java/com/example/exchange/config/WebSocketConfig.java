@@ -12,14 +12,12 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import com.example.exchange.websocket.OrderBookWebSocketHandler;
-import com.example.exchange.websocket.OrderWebSocketHandler;
 import com.example.exchange.websocket.PriceChartsWebSocketHandler;
 
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-  private final OrderWebSocketHandler orderWebSocketHandler;
   private final PriceChartsWebSocketHandler priceChartsSocketHandler;
   private final OrderBookWebSocketHandler orderBookWebSocketHandler;
 
@@ -27,11 +25,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
   @Autowired
   public WebSocketConfig(
-      OrderWebSocketHandler orderWebSocketHandler,
       PriceChartsWebSocketHandler priceChartsSocketHandler,
       OrderBookWebSocketHandler orderBookWebSocketHandler) {
 
-    this.orderWebSocketHandler = orderWebSocketHandler;
     this.priceChartsSocketHandler = priceChartsSocketHandler;
     this.orderBookWebSocketHandler = orderBookWebSocketHandler;
   }
@@ -40,7 +36,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
     System.out.println("Registering WebSocket handlers");
     logger.info("Registering WebSocket handlers");
-    registry.addHandler(orderWebSocketHandler, "/websocket/orders").setAllowedOrigins("*");
     logger.info("WebSocket handler registered for path: /websocket/orders");
     registry.addHandler(orderBookWebSocketHandler, "/websocket/orderbook").setAllowedOrigins("*");
     logger.info("WebSocket handler registered for path: /websocket/orderbook");

@@ -27,7 +27,6 @@ public class OrderService {
 
   public void processOrder(OrderRequest order, long pointer) {
     String redisKey = REDIS_KEY_PREFIX + order.id;
-    // System.out.println("trying 2 to insert" + order.id);
 
     Boolean isNewOrder = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", ORDER_EXPIRATION);
 

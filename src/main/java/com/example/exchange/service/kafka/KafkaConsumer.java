@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Service
 public class KafkaConsumer {
-  private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+  private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
   private final ObjectMapper objectMapper;
   private final OrderService orderService;
   private final OrderBookWebSocketHandler orderBookSocketHandler;
@@ -33,7 +33,7 @@ public class KafkaConsumer {
   private final MatchingEngineJNI matchingEngineJNI;
   private final RedisTemplate<String, String> redisTemplate;
   private Map<String, OrderBookSummary> update = new HashMap<>();
-  String[] symbols = {"AAPL", "GOOGL", "MSFT", "AMZN", "FB"};
+  String[] symbols = {"AAPL"};
 
   public KafkaConsumer(
       ObjectMapper objectMapper,
