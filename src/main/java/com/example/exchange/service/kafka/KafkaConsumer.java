@@ -22,6 +22,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.springframework.kafka.core.KafkaTemplate;
+import java.util.Date;
+
 @Service
 public class KafkaConsumer {
   private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
@@ -32,6 +35,9 @@ public class KafkaConsumer {
   private final MatchingEngineConfig matchingEngineConfig;
   private final MatchingEngineJNI matchingEngineJNI;
   private final RedisTemplate<String, String> redisTemplate;
+
+  private final KafkaTemplate<String, String> kafkaTemplate;
+
   private Map<String, OrderBookSummary> update = new HashMap<>();
   String[] symbols = {"AAPL"};
 
@@ -42,7 +48,9 @@ public class KafkaConsumer {
       PriceChartsWebSocketHandler priceChartsSocketHandler,
       MatchingEngineConfig matchingEngineConfig,
       MatchingEngineJNI matchingEngineJNI,
-      RedisTemplate<String, String> redisTemplate) {
+      RedisTemplate<String, String> redisTemplate,
+      KafkaTemplate<String, String> kafkaTemplate
+      ) {
     this.objectMapper = objectMapper;
     this.orderService = orderService;
     this.orderBookSocketHandler = orderBookSocketHandler;
@@ -50,6 +58,8 @@ public class KafkaConsumer {
     this.matchingEngineJNI = matchingEngineJNI;
     this.priceChartsSocketHandler = priceChartsSocketHandler;
     this.redisTemplate = redisTemplate;
+    this.kafkaTemplate = kafkaTemplate;
+
   }
 
   @KafkaListener(topics = "test", groupId = "myGroup")
@@ -57,12 +67,14 @@ public class KafkaConsumer {
     logger.warn("This is a Secret message " + message);
   }
 
-  @KafkaListener(topics = "orders", groupId = "order-processing-group")
+  @KafkaListener(topics = "orders_AAPL", groupId = "order-processing-group")
   public void processOrder(String orderJson) throws JsonProcessingException {
 
     OrderRequest order = objectMapper.readValue(orderJson, OrderRequest.class);
-    // logger.info("Trying to insert order: " + order.id);
+    logger.info("Trying to insert order: " + order.id);
     long pointer = matchingEngineConfig.getMatchingEnginePointer(order.symbol);
+    logger.info("Matching engine pointer " + pointer);
+
     orderService.processOrder(order, pointer);
   }
 
@@ -75,7 +87,12 @@ public class KafkaConsumer {
         OrderBookSummary orderBookSummary = objectMapper.readValue(summary, OrderBookSummary.class);
         update.put(symbol, orderBookSummary);
         String jsonSummary = objectMapper.writeValueAsString(update);
-        orderBookSocketHandler.broadcastUpdate(jsonSummary);
+        String priceUpdate = broadcastPriceUpdates();
+        // orderBookSocketHandler.broadcastUpdate(jsonSummary);
+
+        kafkaTemplate.send("orders_matched", symbol, jsonSummary);
+        kafkaTemplate.send("new_prices", symbol, priceUpdate);
+
       }
 
     } catch (JsonProcessingException e) {
@@ -84,8 +101,7 @@ public class KafkaConsumer {
     }
   }
 
-  @Scheduled(fixedRate = 1000)
-  public void broadcastPriceUpdates() {
+  public String broadcastPriceUpdates() {
     try {
       ObjectNode allSymbolsData = objectMapper.createObjectNode();
 
@@ -103,10 +119,12 @@ public class KafkaConsumer {
       }
 
       String priceUpdatesJson = objectMapper.writeValueAsString(allSymbolsData);
-      priceChartsSocketHandler.broadcastUpdate(priceUpdatesJson);
+      // priceChartsSocketHandler.broadcastUpdate(priceUpdatesJson);
+      return priceUpdatesJson;
 
     } catch (Exception e) {
       logger.error("Error broadcasting price updates: ", e);
+      return "";
     }
   }
 }

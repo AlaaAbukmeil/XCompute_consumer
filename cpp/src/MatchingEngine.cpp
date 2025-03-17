@@ -9,7 +9,7 @@ string MatchingEngine::printHello()
 
 vector<Trade> MatchingEngine::insertOrder(OrderRequest &order)
 {
-    // logToFile("try to insert order: " + order.id);
+    logToFile("try to insert order: " + order.id);
 
     vector<Trade> trades;
     if (order.type == "BUY")
