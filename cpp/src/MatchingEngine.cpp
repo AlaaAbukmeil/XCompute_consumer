@@ -9,9 +9,10 @@ string MatchingEngine::printHello()
 
 vector<Trade> MatchingEngine::insertOrder(OrderRequest &order)
 {
-    logToFile("try to insert order: " + order.id);
-
-    vector<Trade> trades;
+    // logToFile("try to insert order: " + order.id);
+    std::lock_guard<std::mutex> lock(orderBookMutex);
+        vector<Trade>
+            trades;
     if (order.type == "BUY")
     {
         vector<Trade> buyTrades = matchBuyOrder(order);
@@ -40,15 +41,15 @@ vector<Trade> MatchingEngine::insertOrder(OrderRequest &order)
 vector<Trade> MatchingEngine::matchBuyOrder(OrderRequest &buyOrder)
 {
     vector<Trade> trades;
-    while (!sellOrders.empty() && buyOrder.notionalAmount > 0 && buyOrder.getPrice() >= sellOrders.top().getPrice())
+    while (!sellOrders.empty() && buyOrder.notionalAmount > 0 && buyOrder.getPrice() >= (*sellOrders.begin()).getPrice())
     {
-        OrderRequest sellOrder = sellOrders.top();
-        sellOrders.pop();
+        OrderRequest sellOrder = *sellOrders.begin();
+        sellOrders.erase(sellOrders.begin());
         trades.push_back(executeTrade(buyOrder, sellOrder));
 
         if (sellOrder.getNotionalAmount() > 0)
         {
-            sellOrders.push(sellOrder);
+            sellOrders.insert(sellOrder);
         }
         else
         {
@@ -63,7 +64,7 @@ vector<Trade> MatchingEngine::matchBuyOrder(OrderRequest &buyOrder)
     };
     if (buyOrder.getNotionalAmount() > 0)
     {
-        buyOrders.push(buyOrder);
+        buyOrders.insert(buyOrder);
     }
     return trades;
 }
@@ -71,15 +72,15 @@ vector<Trade> MatchingEngine::matchBuyOrder(OrderRequest &buyOrder)
 vector<Trade> MatchingEngine::matchSellOrder(OrderRequest &sellOrder)
 {
     vector<Trade> trades;
-    while (!buyOrders.empty() && sellOrder.notionalAmount > 0 && sellOrder.getPrice() <= buyOrders.top().getPrice())
+    while (!buyOrders.empty() && sellOrder.notionalAmount > 0 && sellOrder.getPrice() <= (*buyOrders.begin()).getPrice())
     {
-        OrderRequest buyOrder = buyOrders.top();
-        buyOrders.pop();
+        OrderRequest buyOrder = *buyOrders.begin();
+        buyOrders.erase(buyOrders.begin());
         trades.push_back(executeTrade(buyOrder, sellOrder));
 
         if (buyOrder.getNotionalAmount() > 0)
         {
-            buyOrders.push(buyOrder);
+            buyOrders.insert(buyOrder);
         }
         else
         {
@@ -94,7 +95,7 @@ vector<Trade> MatchingEngine::matchSellOrder(OrderRequest &sellOrder)
     };
     if (sellOrder.getNotionalAmount() > 0)
     {
-        sellOrders.push(sellOrder);
+        sellOrders.insert(sellOrder);
     }
 
     return trades;
@@ -121,10 +122,14 @@ Trade MatchingEngine::executeTrade(OrderRequest &buyOrder, OrderRequest &sellOrd
     bool exists = redis->get(symbolKey, existingCandles);
 
     nlohmann::json candlesData;
-    if (exists) {
-        try {
+    if (exists)
+    {
+        try
+        {
             candlesData = nlohmann::json::parse(existingCandles);
-        } catch (...) {
+        }
+        catch (...)
+        {
             candlesData = nlohmann::json::object();
         }
     }
@@ -137,20 +142,22 @@ Trade MatchingEngine::executeTrade(OrderRequest &buyOrder, OrderRequest &sellOrd
     std::string formatted_datetime = datetime_ss.str();
 
     double current_price = static_cast<double>(buyOrder.price);
-    
+
     // Update min/max for current minute
-    if (candlesData.contains(formatted_datetime)) {
+    if (candlesData.contains(formatted_datetime))
+    {
         double existing_min = candlesData[formatted_datetime]["min"].get<double>();
         double existing_max = candlesData[formatted_datetime]["max"].get<double>();
         candlesData[formatted_datetime]["min"] = std::min(existing_min, current_price);
         candlesData[formatted_datetime]["max"] = std::max(existing_max, current_price);
-    } else {
+    }
+    else
+    {
         candlesData[formatted_datetime] = {
             {"symbol", buyOrder.symbol},
             {"min", current_price},
             {"max", current_price},
-            {"timestamp", minute_timestamp}
-        };
+            {"timestamp", minute_timestamp}};
     }
 
     // Store updated candles data
@@ -193,24 +200,24 @@ OrderBookSummary MatchingEngine::getMatchingEngineSummary()
     auto tempBuyOrders = buyOrders;
     for (int i = 0; i < 5 && !tempBuyOrders.empty(); i++)
     {
-        const OrderRequest &order = tempBuyOrders.top();
+        const OrderRequest &order = *tempBuyOrders.begin();
         summary.topBuys.emplace_back(
             order.getPrice(),
             order.getNotionalAmount(),
             order.getOriginalNotionalAmount(),
             order.getId());
-        tempBuyOrders.pop();
+        tempBuyOrders.erase(tempBuyOrders.begin());
     }
 
     auto tempSellOrders = sellOrders;
     for (int i = 0; i < 5 && !tempSellOrders.empty(); i++)
     {
-        const OrderRequest &order = tempSellOrders.top();
+        const OrderRequest &order = *tempSellOrders.begin();
         summary.lowestSells.emplace_back(
             order.getPrice(),
             order.getNotionalAmount(),
             order.getOriginalNotionalAmount(), order.getId());
-        tempSellOrders.pop();
+        tempSellOrders.erase(tempSellOrders.begin());
     }
 
     return summary;

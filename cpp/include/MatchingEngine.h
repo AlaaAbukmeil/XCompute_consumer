@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <set>
+#include <mutex>
 
 using namespace std;
 
@@ -117,7 +119,7 @@ public:
     {
         if (a.getPrice() != b.getPrice())
         {
-            return a.getPrice() < b.getPrice();
+            return a.getPrice() > b.getPrice();
         }
         return a.getId() > b.getId();
     }
@@ -130,7 +132,7 @@ public:
     {
         if (a.getPrice() != b.getPrice())
         {
-            return a.getPrice() > b.getPrice();
+            return a.getPrice() < b.getPrice();
         }
         return a.getId() > b.getId();
     }
@@ -234,14 +236,15 @@ public:
     };
 
 private:
-    priority_queue<OrderRequest, vector<OrderRequest>, BuyOrderCompare> buyOrders;
-    priority_queue<OrderRequest, vector<OrderRequest>, SellOrderCompare> sellOrders;
+    multiset<OrderRequest,  BuyOrderCompare> buyOrders;
+    multiset<OrderRequest,  SellOrderCompare> sellOrders;
     deque<OrderRequest> lastTenFulfilledOrders;
     const size_t MAX_SIZE = 10;
     vector<Trade> matchBuyOrder(OrderRequest& buyOrder);
     vector<Trade> matchSellOrder(OrderRequest& sellOrder);
     Trade executeTrade(OrderRequest& buyOrder, OrderRequest& sellOrder);
     void processFullyFulfilledOrder(OrderRequest& order);
+    std::mutex orderBookMutex;
 };
 
 #endif // MATCHING_ENGINE_H

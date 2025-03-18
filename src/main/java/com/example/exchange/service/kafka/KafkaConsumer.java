@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +22,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.springframework.kafka.core.KafkaTemplate;
-import java.util.Date;
 
 @Service
 public class KafkaConsumer {
@@ -49,8 +47,7 @@ public class KafkaConsumer {
       MatchingEngineConfig matchingEngineConfig,
       MatchingEngineJNI matchingEngineJNI,
       RedisTemplate<String, String> redisTemplate,
-      KafkaTemplate<String, String> kafkaTemplate
-      ) {
+      KafkaTemplate<String, String> kafkaTemplate) {
     this.objectMapper = objectMapper;
     this.orderService = orderService;
     this.orderBookSocketHandler = orderBookSocketHandler;
@@ -59,7 +56,6 @@ public class KafkaConsumer {
     this.priceChartsSocketHandler = priceChartsSocketHandler;
     this.redisTemplate = redisTemplate;
     this.kafkaTemplate = kafkaTemplate;
-
   }
 
   @KafkaListener(topics = "test", groupId = "myGroup")
@@ -92,7 +88,6 @@ public class KafkaConsumer {
 
         kafkaTemplate.send("orders_matched", symbol, jsonSummary);
         kafkaTemplate.send("new_prices", symbol, priceUpdate);
-
       }
 
     } catch (JsonProcessingException e) {
