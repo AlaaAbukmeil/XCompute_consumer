@@ -51,4 +51,13 @@ public class MatchingEngine {
 
     return ResponseEntity.ok(summary);
   }
+  @GetMapping("/clear-matching-engine")
+  public ResponseEntity<String> clearMatchingEngine(@RequestBody OrderRequest orderRequest) {
+
+    long pointer = matchingEngineConfig.getMatchingEnginePointer(orderRequest.symbol);
+
+    matchingEngineJNI.clearOrderBooks(pointer);
+
+    return ResponseEntity.ok("cool");
+  }
 }

@@ -40,12 +40,15 @@ public class MatchingEngineJNI implements AutoCloseable {
   private long nativePtr;
 
   public native void deleteMatchingEngine(long ptr);
+  public native void clearOrderBooks(long ptr);
+
 
   @PreDestroy
   @Override
   public void close() {
     if (nativePtr != 0) {
       deleteMatchingEngine(nativePtr);
+      clearOrderBooks(nativePtr);
       nativePtr = 0;
     }
   }

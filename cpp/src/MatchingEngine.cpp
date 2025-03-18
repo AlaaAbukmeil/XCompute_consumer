@@ -9,7 +9,7 @@ string MatchingEngine::printHello()
 
 vector<Trade> MatchingEngine::insertOrder(OrderRequest &order)
 {
-    // logToFile("try to insert order: " + order.id);
+    logToTradeFile("try to insert order: " + order.id + " order type: " + order.getType() + " price: " + to_string(order.getPrice()) + " amount: " + to_string(order.getNotionalAmount()));
     std::lock_guard<std::mutex> lock(orderBookMutex);
         vector<Trade>
             trades;
@@ -105,6 +105,8 @@ Trade MatchingEngine::executeTrade(OrderRequest &buyOrder, OrderRequest &sellOrd
 {
     long tradePrice = sellOrder.price;
     int tradeAmount = min(buyOrder.notionalAmount, sellOrder.notionalAmount);
+    string log = "Buy Order Id: " + buyOrder.getId() + "\n\nSell Order Id: " + sellOrder.getId() + "\n\nTrade Amount: " + to_string(tradeAmount) + "\n\nBuy Price: " + to_string(buyOrder.getPrice())+ "\n\nSell Price: " + to_string(sellOrder.getPrice())+"\n\n";
+    logToFile(log);
 
     buyOrder.notionalAmount -= tradeAmount;
     sellOrder.notionalAmount -= tradeAmount;
@@ -181,6 +183,7 @@ Trade MatchingEngine::executeTrade(OrderRequest &buyOrder, OrderRequest &sellOrd
         buyOrder.getOriginalNotionalAmount(),
         sellOrder.getOriginalNotionalAmount());
 }
+
 void MatchingEngine::processFullyFulfilledOrder(OrderRequest &order)
 {
 
@@ -221,4 +224,14 @@ OrderBookSummary MatchingEngine::getMatchingEngineSummary()
     }
 
     return summary;
+}
+void MatchingEngine::clearOrderBooks() {
+    std::lock_guard<std::mutex> lock(orderBookMutex);
+    
+    // Clear all order books
+    buyOrders.clear();
+    sellOrders.clear();
+    
+    // Log the clear operation
+    logToFile("Order books cleared");
 }

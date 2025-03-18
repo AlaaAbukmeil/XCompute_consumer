@@ -74,6 +74,15 @@ JNIEXPORT void JNICALL Java_com_example_exchange_jni_MatchingEngineJNI_deleteMat
     Logger::cleanup();
   }
 }
+JNIEXPORT void JNICALL Java_com_example_exchange_jni_MatchingEngineJNI_clearOrderBooks(JNIEnv *env, jobject obj, jlong ptr)
+{
+  if (ptr != 0)
+  {
+    MatchingEngine *engine = reinterpret_cast<MatchingEngine *>(ptr);
+    engine->clearOrderBooks();
+    Logger::cleanup();
+  }
+}
 
 JNIEXPORT jstring JNICALL Java_com_example_exchange_jni_MatchingEngineJNI_getMatchingEngineSummary(JNIEnv *env, jobject obj, jlong ptr)
 {

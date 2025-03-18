@@ -234,6 +234,7 @@ public:
     {
         return symbol;
     };
+    void clearOrderBooks();
 
 private:
     multiset<OrderRequest,  BuyOrderCompare> buyOrders;
